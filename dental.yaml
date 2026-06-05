@@ -1,0 +1,10 @@
+# Thay /path/to/dental_yolo_project bằng đường dẫn thực tế trên server của bạn
+path: /path/to/dental_yolo_project/datasets
+train: train/images
+val: val/images
+test: test/images
+
+names:
+  0: mild_decay
+  1: moderate_decay
+  2: severe_decay

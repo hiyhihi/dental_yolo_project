@@ -1,0 +1,14 @@
+# Bỏ qua môi trường ảo
+.venv/
+__pycache__/
+
+# Bỏ qua Dataset
+datasets/
+
+# Bỏ qua file kết quả và trọng số model
+runs/
+*.pt
+
+# Bỏ qua các file rác của hệ thống hoặc Jupyter
+.ipynb_checkpoints/
+.DS_Store
