@@ -5,8 +5,8 @@ import cv2
 from ultralytics import YOLO
 
 # Cấu hình đường dẫn (khớp với train_experiments.py)
-RUNS_DIR = 'runs/Dental_Detection'
-DATA_YAML = 'datasets/dental-decay-dp2024/decay_server.yaml'
+RUNS_DIR = 'runs/detect/runs/Dental_Detection'
+DATA_YAML = '/mnt/data/users/quynhptit/huyptit/dental_yolo_project/datasets/dental.yaml'
 MODELS = [
     'YOLOv8s_Baseline', 
     'YOLOv8m_Baseline', 
@@ -122,17 +122,82 @@ def predict_and_save(image_path, model_name='YOLOv8s_Augmented', save_path='pred
     except Exception as e:
         print(f"❌ Lỗi khi dự đoán: {e}")
 
+def plot_paper_style_curve(model_name):
+    """
+    Vẽ biểu đồ chuẩn Paper: Đường Loss và mAP trên cùng 1 hình (Trục Y kép).
+    """
+    print(f"\nĐang vẽ biểu đồ chuẩn Paper cho mô hình: {model_name}...")
+    csv_file = os.path.join(RUNS_DIR, model_name, 'results.csv')
+    
+    if not os.path.exists(csv_file):
+        print(f"⚠️ Không tìm thấy file kết quả của {model_name} tại {csv_file}")
+        return
+        
+    # Đọc dữ liệu
+    df = pd.read_csv(csv_file)
+    df.columns = df.columns.str.strip() # Dọn dẹp khoảng trắng
+    
+    epochs = df['epoch']
+    # Chọn cột Box Loss của tập Train (Bạn có thể đổi thành val/box_loss nếu muốn)
+    if 'train/box_loss' not in df.columns:
+        print("⚠️ Không tìm thấy cột 'train/box_loss' trong file kết quả.")
+        return
+    loss = df['train/box_loss']
+    
+    # Tìm cột mAP@0.5
+    map_cols = [c for c in df.columns if 'mAP50' in c and '95' not in c]
+    if not map_cols:
+        print("⚠️ Không tìm thấy cột mAP trong file kết quả.")
+        return
+    map50 = df[map_cols[0]]
+    
+    # Khởi tạo đồ thị
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+    
+    # --- Trục Y bên TRÁI (Dành cho Loss) ---
+    color1 = '#ff7f0e' # Màu cam đặc trưng
+    ax1.set_xlabel('Epochs', fontweight='bold', fontsize=12)
+    ax1.set_ylabel('Training Box Loss', color=color1, fontweight='bold', fontsize=12)
+    line1 = ax1.plot(epochs, loss, color=color1, linewidth=2.5, label='Train Loss')
+    ax1.tick_params(axis='y', labelcolor=color1)
+    ax1.grid(True, linestyle='--', alpha=0.5)
+    
+    # --- Trục Y bên PHẢI (Dành cho mAP) ---
+    ax2 = ax1.twinx()  # Lệnh tạo trục Y thứ 2 đối xứng
+    color2 = '#1f77b4' # Màu xanh dương
+    ax2.set_ylabel('mAP@0.5', color=color2, fontweight='bold', fontsize=12)
+    line2 = ax2.plot(epochs, map50, color=color2, linewidth=2.5, label='mAP@0.5')
+    ax2.tick_params(axis='y', labelcolor=color2)
+    
+    # --- Ghép chú thích (Legend) ---
+    lines = line1 + line2
+    labels = [l.get_label() for l in lines]
+    ax1.legend(lines, labels, loc='center right', fontsize=11)
+    
+    # Tiêu đề và căn lề
+    plt.title(f'Training Progress - {model_name}', fontweight='bold', fontsize=14)
+    fig.tight_layout()
+    
+    # Lưu file ảnh chất lượng cao
+    save_path = f'{model_name}_paper_plot.png'
+    plt.savefig(save_path, dpi=300)
+    print(f"✅ Đã lưu biểu đồ thành công tại: {save_path}")
+
 if __name__ == '__main__':
+
     # 1. Đánh giá tất cả models
-    evaluate_all_models(split='val')
+    evaluate_all_models(split='test')
     
-    # 2. Vẽ và lưu biểu đồ Loss & mAP
-    plot_loss_curves(save_path='loss_comparison_plot.png')
+    # # 2. Vẽ và lưu biểu đồ Loss & mAP
+    # plot_loss_curves(save_path='loss_comparison_plot.png')
     
-    # 3. Test thử 1 ảnh (ĐỔI ĐƯỜNG DẪN NÀY THÀNH ẢNH THẬT TRONG TẬP DATA CỦA BẠN)
-    test_image_path = 'datasets/dental-decay-dp2024/images/val/image_17.jpg' 
-    predict_and_save(
-        image_path=test_image_path, 
-        model_name='YOLOv8s_Augmented', # Chọn model tốt nhất để test
-        save_path='sample_prediction.jpg'
-    )
+    # for model_name in MODELS:
+    #     plot_paper_style_curve(model_name)
+
+    # 3. Test thử 1 ảnh 
+    # test_image_path = 'datasets/val/images/image_2874.jpg' 
+    # predict_and_save(
+    #     image_path=test_image_path, 
+    #     model_name='YOLOv8s_Baseline', # Chọn model tốt nhất để test
+    #     save_path='sample_prediction.jpg'
+    # )
